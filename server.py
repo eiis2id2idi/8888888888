@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -9,38 +10,54 @@ CORS(app)
 @app.route("/")
 def home():
     return jsonify({
-        "status": "online"
+        "status": "online",
+        "cookies": os.path.exists("cookies.txt")
     })
 
 
-@app.route("/test")
-def test():
+@app.route("/audio")
+def audio():
 
-    vid = request.args.get("id")
+    video_id = request.args.get("id")
 
-    if not vid:
-        return jsonify({"error":"id faltando"})
+    if not video_id:
+        return jsonify({
+            "error": "id faltando"
+        })
 
 
-    url = f"https://youtube.com/watch?v={vid}"
+    url = f"https://www.youtube.com/watch?v={video_id}"
 
 
     try:
 
-        opts = {
+        ydl_opts = {
+
             "cookiefile": "cookies.txt",
-            "quiet": False,
+
             "noplaylist": True,
+
+            "quiet": False,
+
+            "format": "worstaudio/worst",
 
             "extractor_args": {
                 "youtube": {
-                    "player_client": ["android"]
+                    "player_client": [
+                        "android",
+                        "web"
+                    ]
                 }
+            },
+
+            "http_headers": {
+                "User-Agent":
+                "Mozilla/5.0 (Linux; Android 13)"
             }
         }
 
 
-        with yt_dlp.YoutubeDL(opts) as ydl:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
 
             info = ydl.extract_info(
                 url,
@@ -49,15 +66,17 @@ def test():
 
 
         return jsonify({
+            "success": True,
             "title": info.get("title"),
             "formats": len(info.get("formats", [])),
-            "url": info.get("url")
+            "audio": info.get("url")
         })
 
 
     except Exception as e:
 
         return jsonify({
+            "success": False,
             "error": str(e)
         })
 
