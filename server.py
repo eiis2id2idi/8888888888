@@ -12,7 +12,7 @@ def home():
     return jsonify({
         "status": "online",
         "service": "YouTube Audio API",
-        "cookies": os.path.exists("cookies.txt")
+        "cookies_loaded": os.path.exists("cookies.txt")
     })
 
 
@@ -32,34 +32,35 @@ def audio():
 
     try:
 
-        options = {
+        ydl_opts = {
 
-            # pega somente áudio
-            "format": "bestaudio/best",
+            # tenta vários formatos
+            "format": "bestaudio/best/best",
 
-            # não pega playlist
             "noplaylist": True,
 
-            # não baixa arquivo
             "skip_download": True,
 
-            # usa cookies
+            # usa autenticação
             "cookiefile": "cookies.txt",
 
-            # evita muitos logs
             "quiet": True,
 
-            # alguns ajustes de conexão
             "nocheckcertificate": True,
+
+            "extract_flat": False,
 
             "http_headers": {
                 "User-Agent":
-                "Mozilla/5.0 (Linux; Android 13)"
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
             }
         }
 
 
-        with yt_dlp.YoutubeDL(options) as ydl:
+        print("Extraindo:", youtube_url)
+
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
 
             info = ydl.extract_info(
                 youtube_url,
@@ -70,10 +71,22 @@ def audio():
         audio_url = info.get("url")
 
 
+        # caso o formato principal não venha
+        if not audio_url and info.get("formats"):
+
+            for fmt in reversed(info["formats"]):
+
+                if fmt.get("url"):
+
+                    audio_url = fmt["url"]
+                    break
+
+
+
         if not audio_url:
 
             return jsonify({
-                "error": "Não encontrou URL de áudio"
+                "error": "Nenhum link de áudio encontrado"
             }), 404
 
 
@@ -88,14 +101,17 @@ def audio():
 
             "duration": info.get("duration"),
 
+            "video_id": video_id,
+
             "audio": audio_url
 
         })
 
 
+
     except Exception as e:
 
-        print("ERRO:", e)
+        print("ERRO:", str(e))
 
         return jsonify({
 
