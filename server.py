@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import yt_dlp
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -9,49 +9,58 @@ CORS(app)
 @app.route("/")
 def home():
     return jsonify({
-        "status":"online",
-        "service":"Audio Server"
+        "status": "online",
+        "service": "Audio Extractor API"
     })
 
 
 @app.route("/audio")
-def get_audio():
+def audio():
 
     video_id = request.args.get("id")
 
     if not video_id:
         return jsonify({
-            "error":"id obrigatório"
+            "error": "video id obrigatório"
         }),400
-
-
-    url = "https://www.youtube.com/watch?v=" + video_id
 
 
     try:
 
-        options = {
-            "format":"bestaudio",
-            "quiet":True,
-            "noplaylist":True
-        }
+        url = f"https://piped.video/api/v1/streams/{video_id}"
 
 
-        with yt_dlp.YoutubeDL(options) as ydl:
+        r = requests.get(
+            url,
+            timeout=15
+        )
 
-            info = ydl.extract_info(
-                url,
-                download=False
-            )
+
+        data = r.json()
+
+
+        audio = None
+
+        for stream in data.get("audioStreams", []):
+
+            if stream.get("url"):
+                audio = stream["url"]
+                break
+
+
+        if not audio:
+            return jsonify({
+                "error":"audio não encontrado"
+            }),404
 
 
         return jsonify({
 
-            "title": info.get("title"),
+            "title": data.get("title"),
 
-            "audio": info.get("url"),
+            "thumbnail": data.get("thumbnailUrl"),
 
-            "thumbnail": info.get("thumbnail")
+            "audio": audio
 
         })
 
@@ -67,5 +76,5 @@ def get_audio():
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
-        port=5000
+        port=10000
     )
