@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
-import os
 
 app = Flask(__name__)
 CORS(app)
@@ -10,31 +9,34 @@ CORS(app)
 @app.route("/")
 def home():
     return jsonify({
-        "status": "online",
-        "cookies_loaded": os.path.exists("cookies.txt")
+        "status": "online"
     })
 
 
-@app.route("/formats")
-def formats():
+@app.route("/test")
+def test():
 
-    video_id = request.args.get("id")
+    vid = request.args.get("id")
 
-    if not video_id:
-        return jsonify({
-            "error": "id obrigatório"
-        }), 400
+    if not vid:
+        return jsonify({"error":"id faltando"})
 
 
-    url = f"https://www.youtube.com/watch?v={video_id}"
+    url = f"https://youtube.com/watch?v={vid}"
 
 
     try:
 
         opts = {
             "cookiefile": "cookies.txt",
-            "quiet": True,
-            "noplaylist": True
+            "quiet": False,
+            "noplaylist": True,
+
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android"]
+                }
+            }
         }
 
 
@@ -46,22 +48,10 @@ def formats():
             )
 
 
-        lista = []
-
-        for f in info.get("formats", []):
-
-            lista.append({
-                "format_id": f.get("format_id"),
-                "ext": f.get("ext"),
-                "acodec": f.get("acodec"),
-                "vcodec": f.get("vcodec"),
-                "audio": f.get("abr")
-            })
-
-
         return jsonify({
             "title": info.get("title"),
-            "formats": lista
+            "formats": len(info.get("formats", [])),
+            "url": info.get("url")
         })
 
 
@@ -69,8 +59,7 @@ def formats():
 
         return jsonify({
             "error": str(e)
-        }), 500
-
+        })
 
 
 if __name__ == "__main__":
