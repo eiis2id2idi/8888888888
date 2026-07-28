@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
@@ -11,7 +10,7 @@ CORS(app)
 def home():
     return jsonify({
         "status": "online",
-        "service": "Audio Extractor API"
+        "service": "YouTube Audio API"
     })
 
 
@@ -22,18 +21,18 @@ def audio():
 
     if not video_id:
         return jsonify({
-            "error": "video id obrigatório"
+            "error": "id obrigatório"
         }), 400
 
 
     try:
 
-        # API extractor
-        url = f"https://piped.video/api/v1/streams/{video_id}"
+        # Instância da API Piped
+        api_url = f"https://pipedapi.kavin.rocks/streams/{video_id}"
 
 
         response = requests.get(
-            url,
+            api_url,
             headers={
                 "User-Agent": "Mozilla/5.0"
             },
@@ -41,20 +40,19 @@ def audio():
         )
 
 
-        print("STATUS API:", response.status_code)
-        print("RESPOSTA API:", response.text[:500])
+        print("STATUS:", response.status_code)
+        print("RESPOSTA:", response.text[:300])
 
 
-        # Verifica se retornou JSON
         try:
             data = response.json()
 
-        except Exception:
+        except:
 
             return jsonify({
-                "error": "API não retornou JSON",
+                "error": "Extractor não retornou JSON",
                 "status": response.status_code,
-                "response": response.text[:500]
+                "response": response.text[:300]
             }), 500
 
 
@@ -62,8 +60,11 @@ def audio():
         audio_url = None
 
 
-        # Procura áudio
-        for stream in data.get("audioStreams", []):
+        # Procura stream de áudio
+        streams = data.get("audioStreams", [])
+
+
+        for stream in streams:
 
             if stream.get("url"):
 
@@ -78,13 +79,17 @@ def audio():
 
                 "error": "Nenhum áudio encontrado",
 
-                "available_keys": list(data.keys())
+                "title": data.get("title"),
 
-            }),404
+                "keys": list(data.keys())
+
+            }), 404
 
 
 
         return jsonify({
+
+            "success": True,
 
             "title": data.get("title"),
 
@@ -99,8 +104,8 @@ def audio():
     except requests.exceptions.Timeout:
 
         return jsonify({
-            "error": "Timeout ao acessar extractor"
-        }),500
+            "error": "Tempo limite excedido"
+        }), 500
 
 
 
@@ -108,7 +113,7 @@ def audio():
 
         return jsonify({
             "error": str(e)
-        }),500
+        }), 500
 
 
 
