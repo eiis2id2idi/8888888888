@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -10,7 +11,8 @@ CORS(app)
 def home():
     return jsonify({
         "status": "online",
-        "service": "YouTube yt-dlp Audio API"
+        "service": "YouTube Audio API",
+        "cookies": os.path.exists("cookies.txt")
     })
 
 
@@ -21,7 +23,7 @@ def audio():
 
     if not video_id:
         return jsonify({
-            "error": "id obrigatório"
+            "error": "Informe o id do vídeo"
         }), 400
 
 
@@ -32,21 +34,27 @@ def audio():
 
         options = {
 
-            # tenta pegar somente áudio
+            # pega somente áudio
             "format": "bestaudio/best",
 
-            # não baixa arquivo
+            # não pega playlist
             "noplaylist": True,
 
-            # reduz logs
+            # não baixa arquivo
+            "skip_download": True,
+
+            # usa cookies
+            "cookiefile": "cookies.txt",
+
+            # evita muitos logs
             "quiet": True,
 
-            # evita alguns bloqueios simples
+            # alguns ajustes de conexão
             "nocheckcertificate": True,
 
             "http_headers": {
                 "User-Agent":
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                "Mozilla/5.0 (Linux; Android 13)"
             }
         }
 
@@ -65,8 +73,9 @@ def audio():
         if not audio_url:
 
             return jsonify({
-                "error": "URL de áudio não encontrada"
+                "error": "Não encontrou URL de áudio"
             }), 404
+
 
 
         return jsonify({
@@ -76,6 +85,8 @@ def audio():
             "title": info.get("title"),
 
             "thumbnail": info.get("thumbnail"),
+
+            "duration": info.get("duration"),
 
             "audio": audio_url
 
